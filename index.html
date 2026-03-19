@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<!-- saved from url=(0040)file:///C:/Users/Hp/Downloads/index.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart College Bus Tracking System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com/">
+  <link href="./index_files/css2" rel="stylesheet">
+  <link rel="stylesheet" href="./index_files/leaflet.css">
+  <script src="./index_files/leaflet.js.download"></script>
+  <style>
+    /* ============================================================
+       DESIGN SYSTEM — SOFT TRANSIT THEME
+       Light blue / soft green / white background palette
+       ============================================================ */
+    :root {
+      --blue-50:  #eff6ff;
+      --blue-100: #dbeafe;
+      --blue-200: #bfdbfe;
+      --blue-400: #60a5fa;
+      --blue-500: #3b82f6;
+      --blue-600: #2563eb;
+      --blue-700: #1d4ed8;
+
+      --green-50:  #f0fdf4;
+      --green-100: #dcfce7;
+      --green-400: #4ade80;
+      --green-500: #22c55e;
+      --green-600: #16a34a;
+
+      --red-100: #fee2e2;
+      --red-500: #ef4444;
+
+      --amber-100: #fef3c7;
+      --amber-500: #f59e0b;
+
+      --gray-50:  #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --gray-900: #0f172a;
+
+      --white: #ffffff;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,.10), 0 4px 8px rgba(0,0,0,.06);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-lg: 18px;
+      --font-sans: 'DM Sans', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ===== UTILITY ===== */
+    .hidden { display: none !important; }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .justify-center { justify-content: center; }
+    .gap-2 { gap: 8px; }
+    .gap-3 { gap: 12px; }
+    .gap-4 { gap: 16px; }
+    .w-full { width: 100%; }
+    .text-sm { font-size: .875rem; }
+    .text-xs { font-size: .75rem; }
+    .font-semibold { font-weight: 600; }
+    .font-bold { font-weight: 700; }
+    .rounded { border-radius: var(--radius-sm); }
+    .rounded-lg { border-radius: var(--radius); }
+    .rounded-xl { border-radius: var(--radius-lg); }
+
+    /* ===== TOAST ===== */
+    #toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--white);
+      border-left: 4px solid var(--blue-500);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      box-shadow: var(--shadow-lg);
+      font-size: .875rem;
+      font-weight: 500;
+      max-width: 320px;
+      animation: slideIn .3s ease;
+      pointer-events: all;
+    }
+    .toast.success { border-color: var(--green-500); }
+    .toast.error   { border-color: var(--red-500); }
+    .toast.warning { border-color: var(--amber-500); }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(40px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to   { opacity: 0; transform: translateY(-8px); }
+    }
+
+    /* ===== LOADING ===== */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      display: inline-block;
+    }
+    .spinner.dark {
+      border-color: rgba(59,130,246,.2);
+      border-top-color: var(--blue-500);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== SCREENS ===== */
+    .screen { display: none; min-height: 100vh; }
+    .screen.active { display: flex; }
+
+    /* ============================================================
+       LANDING / AUTH SCREEN
+       ============================================================ */
+    #screen-landing {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--blue-50) 0%, #e0f2fe 40%, var(--green-50) 100%);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    #screen-landing::before {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(96,165,250,.15) 0%, transparent 70%);
+      top: -150px; right: -150px;
+      border-radius: 50%;
+    }
+    #screen-landing::after {
+      content: '';
+      position: absolute;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(74,222,128,.12) 0%, transparent 70%);
+      bottom: -100px; left: -100px;
+      border-radius: 50%;
+    }
+
+    .landing-card {
+      background: var(--white);
+      border-radius: 24px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .brand-icon {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, var(--blue-500), var(--blue-600));
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 28px;
+    }
+    .brand h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--gray-800);
+      line-height: 1.3;
+    }
+    .brand p {
+      color: var(--gray-500);
+      font-size: .9rem;
+      margin-top: 4px;
+    }
+
+    .role-tabs {
+      display: flex;
+      background: var(--gray-100);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      margin-bottom: 28px;
+      gap: 4px;
+    }
+    .role-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--gray-500);
+      transition: all .2s;
+    }
+    .role-tab.active {
+      background: var(--white);
+      color: var(--blue-600);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* ===== FORM ===== */
+    .form-group { margin-bottom: 18px; }
+    .form-label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 6px;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+    .form-input, .form-select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: .9rem;
+      color: var(--gray-800);
+      background: var(--white);
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+      appearance: none;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: var(--blue-400);
+      box-shadow: 0 0 0 3px rgba(96,165,250,.15);
+    }
+    .form-input.error { border-color: var(--red-500); }
+    .form-error { color: var(--red-500); font-size: .78rem; margin-top: 4px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 24px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all .2s;
+      text-decoration: none;
+    }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--blue-500), var(--blue-600));
+      color: white;
+      width: 100%;
+      box-shadow: 0 4px 14px rgba(59,130,246,.35);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--blue-600), var(--blue-700));
+      box-shadow: 0 6px 20px rgba(59,130,246,.45);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: var(--gray-100);
+      color: var(--gray-700);
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--gray-200); }
+    .btn-green {
+      background: linear-gradient(135deg, var(--green-500), var(--green-600));
+      color: white;
+      box-shadow: 0 4px 14px rgba(34,197,94,.3);
+    }
+    .btn-green:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+    .btn-danger {
+      background: var(--red-100);
+      color: var(--red-500);
+    }
+    .btn-danger:hover:not(:disabled) { background: #fca5a5; }
+    .btn-sm { padding: 7px 14px; font-size: .8rem; }
+    .btn-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      color: var(--gray-500);
+      transition: background .2s;
+    }
+    .btn-icon:hover { background: var(--gray-100); color: var(--gray-700); }
+
+    .demo-accounts {
+      margin-top: 20px;
+      padding: 14px;
+      background: var(--blue-50);
+      border-radius: var(--radius-sm);
+      font-size: .78rem;
+      color: var(--gray-600);
+      border: 1px solid var(--blue-100);
+    }
+    .demo-accounts strong { color: var(--blue-600); display: block; margin-bottom: 6px; }
+    .demo-accounts code {
+      background: var(--blue-100);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: .75rem;
+    }
+
+    /* ============================================================
+       MAIN APP LAYOUT
+       ============================================================ */
+    #screen-app {
+      flex-direction: column;
+      background: var(--gray-50);
+    }
+
+    /* ===== TOPBAR ===== */
+    .topbar {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 20px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--gray-800);
+    }
+    .topbar-brand-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--blue-500), var(--blue-600));
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--gray-100);
+      border-radius: 24px;
+      padding: 5px 12px 5px 5px;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--gray-700);
+    }
+    .user-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: white;
+    }
+    .avatar-driver { background: linear-gradient(135deg, var(--blue-500), var(--blue-600)); }
+    .avatar-student { background: linear-gradient(135deg, var(--green-500), var(--green-600)); }
+    .role-pill {
+      font-size: .7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .role-pill.driver { background: var(--blue-100); color: var(--blue-600); }
+    .role-pill.student { background: var(--green-100); color: var(--green-600); }
+
+    /* ===== TABS ===== */
+    .tab-bar {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 20px;
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      padding: 14px 18px;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--gray-500);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      border-bottom: 3px solid transparent;
+      white-space: nowrap;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tab-btn.active {
+      color: var(--blue-600);
+      border-bottom-color: var(--blue-500);
+    }
+    .tab-btn:hover:not(.active) { color: var(--gray-700); background: var(--gray-50); }
+
+    /* ===== MAIN CONTENT ===== */
+    .app-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-100);
+      margin-bottom: 16px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gray-800);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .icon-blue { background: var(--blue-100); }
+    .icon-green { background: var(--green-100); }
+    .icon-amber { background: var(--amber-100); }
+    .icon-red { background: var(--red-100); }
+
+    /* ===== MAP ===== */
+    .map-container {
+      width: 100%;
+      height: 380px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      margin-bottom: 16px;
+    }
+    #driver-map, #student-map { width: 100%; height: 100%; }
+
+    /* ===== STOP LIST ===== */
+    .stop-list { display: flex; flex-direction: column; gap: 8px; }
+    .stop-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--gray-100);
+      background: var(--gray-50);
+      transition: background .15s;
+    }
+    .stop-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .stop-dot.present { background: var(--green-500); box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
+    .stop-dot.absent  { background: var(--red-500);   box-shadow: 0 0 0 3px rgba(239,68,68,.2); }
+    .stop-dot.pending { background: var(--gray-300); }
+    .stop-name { font-size: .875rem; font-weight: 500; flex: 1; color: var(--gray-700); }
+    .stop-badge {
+      font-size: .7rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-weight: 600;
+    }
+    .stop-badge.present { background: var(--green-100); color: var(--green-600); }
+    .stop-badge.absent  { background: var(--red-100);   color: var(--red-500); }
+    .stop-badge.pending { background: var(--gray-100);  color: var(--gray-500); }
+    .skip-badge {
+      font-size: .7rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-weight: 600;
+      background: var(--amber-100);
+      color: var(--amber-500);
+    }
+
+    /* ===== INFO BANNERS ===== */
+    .info-banner {
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: .875rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .info-banner.blue  { background: var(--blue-50);  color: var(--blue-700);  border: 1px solid var(--blue-100); }
+    .info-banner.green { background: var(--green-50); color: var(--green-700); border: 1px solid var(--green-100); }
+    .info-banner.amber { background: var(--amber-100); color: #92400e; border: 1px solid #fde68a; }
+    .info-banner.red   { background: var(--red-100); color: #991b1b; border: 1px solid #fca5a5; }
+
+    /* ===== STAT CARDS ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-100);
+      text-align: center;
+    }
+    .stat-card .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-card .label { font-size: .72rem; color: var(--gray-500); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .stat-card.blue .value  { color: var(--blue-500); }
+    .stat-card.green .value { color: var(--green-500); }
+    .stat-card.red .value   { color: var(--red-500); }
+
+    /* ===== LATE MESSAGES ===== */
+    .late-msg-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px;
+      background: var(--gray-50);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--gray-100);
+      margin-bottom: 10px;
+      transition: background .15s;
+    }
+    .late-msg-item.checked {
+      background: var(--green-50);
+      border-color: var(--green-100);
+    }
+    .late-msg-info { flex: 1; }
+    .late-msg-name { font-weight: 600; font-size: .875rem; color: var(--gray-800); margin-bottom: 3px; }
+    .late-msg-text { font-size: .82rem; color: var(--gray-500); }
+    .late-msg-checkbox {
+      width: 20px; height: 20px;
+      cursor: pointer;
+      accent-color: var(--green-500);
+    }
+
+    /* ===== ATTENDANCE ===== */
+    .attendance-options {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .att-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--gray-200);
+      background: var(--white);
+      font-family: var(--font-sans);
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      text-align: center;
+    }
+    .att-btn:hover { transform: translateY(-2px); }
+    .att-btn.present-btn:hover,
+    .att-btn.present-btn.selected {
+      border-color: var(--green-500);
+      background: var(--green-50);
+      color: var(--green-600);
+    }
+    .att-btn.absent-btn:hover,
+    .att-btn.absent-btn.selected {
+      border-color: var(--red-500);
+      background: var(--red-100);
+      color: var(--red-500);
+    }
+
+    /* ===== DELAY INPUT ===== */
+    .delay-input-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .delay-input-row .form-group { flex: 1; margin-bottom: 0; }
+
+    /* ===== BUS SELECTOR ===== */
+    .bus-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .bus-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--gray-200);
+      background: var(--white);
+      font-family: var(--font-sans);
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all .2s;
+      color: var(--gray-600);
+    }
+    .bus-btn:hover { border-color: var(--blue-300); color: var(--blue-600); }
+    .bus-btn.selected {
+      border-color: var(--blue-500);
+      background: var(--blue-50);
+      color: var(--blue-600);
+    }
+
+    /* ===== LIVE INDICATOR ===== */
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--green-600);
+    }
+    .live-dot {
+      width: 8px; height: 8px;
+      background: var(--green-500);
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .6; transform: scale(1.3); }
+    }
+
+    /* ===== BUS POSITION DISPLAY ===== */
+    .bus-eta {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .eta-card {
+      flex: 1;
+      background: var(--white);
+      border: 1px solid var(--gray-100);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      text-align: center;
+    }
+    .eta-card .eta-val { font-size: 1.3rem; font-weight: 700; color: var(--blue-600); }
+    .eta-card .eta-label { font-size: .72rem; color: var(--gray-500); font-weight: 600; margin-top: 2px; text-transform: uppercase; }
+
+    /* ===== SECTION DIVIDER ===== */
+    .section-label {
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--gray-400);
+      margin-bottom: 10px;
+      margin-top: 8px;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 480px) {
+      .landing-card { padding: 32px 20px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid .stat-card:last-child { grid-column: span 2; }
+      .bus-selector { flex-wrap: wrap; }
+      .topbar-brand span { display: none; }
+      .tab-btn { padding: 12px 12px; font-size: .8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ======================== TOAST CONTAINER ======================== -->
+<div id="toast-container"></div>
+
+<!-- ======================== SCREEN: LANDING ======================== -->
+<div id="screen-landing" class="screen active">
+  <div class="landing-card">
+
+    <div class="brand">
+      <div class="brand-icon">🚌</div>
+      <h1>Smart Bus Tracker</h1>
+      <p>College Bus Tracking &amp; Communication</p>
+    </div>
+
+    <!-- Role Tabs -->
+    <div class="role-tabs">
+      <button class="role-tab active" id="tab-driver" onclick="switchLoginRole(&#39;driver&#39;)">🚗 Driver</button>
+      <button class="role-tab" id="tab-student" onclick="switchLoginRole(&#39;student&#39;)">🎓 Student</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="login-email" placeholder="you@college.edu" required="">
+        <div class="form-error hidden" id="email-error"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="login-password" placeholder="••••••••" required="">
+        <div class="form-error hidden" id="pass-error"></div>
+      </div>
+      <button type="submit" class="btn btn-primary" id="login-btn">
+        <span id="login-btn-text">Sign In</span>
+        <span class="spinner hidden" id="login-spinner"></span>
+      </button>
+    </form>
+
+    <!-- Demo Accounts -->
+    <div class="demo-accounts">
+      <strong>🔑 Demo Accounts</strong>
+      <div style="margin-bottom:5px">
+        Driver: <code>driver@bus.com</code> / <code>driver123</code>
+      </div>
+      <div>
+        Student: <code>student@bus.com</code> / <code>student123</code>
+        &nbsp;|&nbsp; Bus 1, Stop: Main Gate
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================== SCREEN: APP ======================== -->
+<div id="screen-app" class="screen">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-brand-icon">🚌</div>
+      <span>Smart Bus Tracker</span>
+    </div>
+    <div class="topbar-right">
+      <div class="user-badge">
+        <div class="user-avatar" id="user-avatar-icon"></div>
+        <span id="user-display-name">User</span>
+        <span class="role-pill" id="user-role-pill">Role</span>
+      </div>
+      <button class="btn-icon" onclick="handleLogout()" title="Logout">⏻</button>
+    </div>
+  </header>
+
+  <!-- Tab Bar -->
+  <nav class="tab-bar" id="tab-bar"></nav>
+
+  <!-- Main Content -->
+  <div class="app-content" id="app-content"></div>
+
+</div>
+
+<script>
+/* ================================================================
+   SMART COLLEGE BUS TRACKING SYSTEM
+   Full frontend simulation with localStorage persistence
+   Simulated real-time GPS movement
+   ================================================================ */
+
+// ─── DATA STORE ─────────────────────────────────────────────────
+// Simulated database using localStorage
+const DB = {
+  get: (key) => { try { return JSON.parse(localStorage.getItem('sbt_' + key)); } catch(e) { return null; } },
+  set: (key, val) => localStorage.setItem('sbt_' + key, JSON.stringify(val)),
+  init() {
+    // Seed demo users if not present
+    if (!this.get('users')) {
+      this.set('users', [
+        { id: 'u1', name: 'Rajan Kumar', email: 'driver@bus.com', password: 'driver123', role: 'driver', busNumber: null },
+        { id: 'u2', name: 'Arjun Nair', email: 'student@bus.com', password: 'student123', role: 'student', busNumber: 1, stop: 'Main Gate' },
+        { id: 'u3', name: 'Priya Menon', email: 'priya@bus.com', password: 'pass123', role: 'student', busNumber: 1, stop: 'City Center' },
+        { id: 'u4', name: 'Sneha Das', email: 'sneha@bus.com', password: 'pass123', role: 'student', busNumber: 2, stop: 'Park Road' },
+        { id: 'u5', name: 'Rahul Singh', email: 'rahul@bus.com', password: 'pass123', role: 'student', busNumber: 1, stop: 'Library Junction' },
+      ]);
+    }
+    // Seed buses
+    if (!this.get('buses')) {
+      this.set('buses', [
+        {
+          busNumber: 1, driverName: 'Rajan Kumar',
+          stops: [
+            { id: 's1', name: 'College Gate',     lat: 10.0200, lng: 76.3100 },
+            { id: 's2', name: 'Main Gate',        lat: 10.0280, lng: 76.3170 },
+            { id: 's3', name: 'Library Junction', lat: 10.0350, lng: 76.3240 },
+            { id: 's4', name: 'City Center',      lat: 10.0420, lng: 76.3310 },
+            { id: 's5', name: 'Market Square',    lat: 10.0490, lng: 76.3380 },
+            { id: 's6', name: 'North Campus',     lat: 10.0560, lng: 76.3450 },
+          ]
+        },
+        {
+          busNumber: 2, driverName: 'Vijay Pillai',
+          stops: [
+            { id: 's7', name: 'South Block',  lat: 10.0100, lng: 76.3050 },
+            { id: 's8', name: 'Park Road',    lat: 10.0150, lng: 76.3120 },
+            { id: 's9', name: 'Tech Hub',     lat: 10.0200, lng: 76.3200 },
+            { id: 's10', name: 'West Gate',   lat: 10.0250, lng: 76.3270 },
+            { id: 's11', name: 'River Bridge',lat: 10.0300, lng: 76.3340 },
+          ]
+        },
+        {
+          busNumber: 3, driverName: 'Suresh Babu',
+          stops: [
+            { id: 's12', name: 'East Campus', lat: 10.0600, lng: 76.3500 },
+            { id: 's13', name: 'Town Hall',   lat: 10.0650, lng: 76.3560 },
+            { id: 's14', name: 'Bus Stand',   lat: 10.0700, lng: 76.3620 },
+            { id: 's15', name: 'Hostel Block',lat: 10.0750, lng: 76.3680 },
+          ]
+        }
+      ]);
+    }
+    // Seed initial state
+    if (!this.get('attendance')) this.set('attendance', {});
+    if (!this.get('delays')) this.set('delays', { 1: 0, 2: 0, 3: 0 });
+    if (!this.get('dispatch')) this.set('dispatch', { 1: '', 2: '', 3: '' });
+    if (!this.get('lateMessages')) this.set('lateMessages', []);
+    if (!this.get('busPositions')) {
+      this.set('busPositions', {
+        1: { lat: 10.0200, lng: 76.3100, stopIndex: 0 },
+        2: { lat: 10.0100, lng: 76.3050, stopIndex: 0 },
+        3: { lat: 10.0600, lng: 76.3500, stopIndex: 0 },
+      });
+    }
+  }
+};
+
+// ─── AUTH STATE ──────────────────────────────────────────────────
+let currentUser = null;
+
+// ─── MAP INSTANCES ───────────────────────────────────────────────
+let driverMap = null, studentMap = null;
+let busMarker = null, driverBusMarker = null;
+let stopMarkersDriver = [], stopMarkersStudent = [];
+let gpsInterval = null;
+
+// ─── LOGIN ROLE ──────────────────────────────────────────────────
+let loginRole = 'driver';
+
+/* ================================================================
+   TOAST NOTIFICATIONS
+   ================================================================ */
+function toast(msg, type = 'info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : '');
+  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  t.innerHTML = `${icons[type] || icons.info} ${msg}`;
+  c.appendChild(t);
+  setTimeout(() => {
+    t.style.animation = 'fadeOut .3s ease forwards';
+    setTimeout(() => t.remove(), 300);
+  }, 3000);
+}
+
+/* ================================================================
+   AUTH: LOGIN / LOGOUT
+   ================================================================ */
+function switchLoginRole(role) {
+  loginRole = role;
+  document.getElementById('tab-driver').classList.toggle('active', role === 'driver');
+  document.getElementById('tab-student').classList.toggle('active', role === 'student');
+  document.getElementById('login-email').value    = role === 'driver' ? 'driver@bus.com' : 'student@bus.com';
+  document.getElementById('login-password').value = role === 'driver' ? 'driver123'      : 'student123';
+  // Clear any previous error messages when switching tabs
+  const emailErr = document.getElementById('email-error');
+  const passErr  = document.getElementById('pass-error');
+  if (emailErr) emailErr.classList.add('hidden');
+  if (passErr)  passErr.classList.add('hidden');
+}
+// Pre-fill demo credentials on page load
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('login-email').value    = 'driver@bus.com';
+  document.getElementById('login-password').value = 'driver123';
+});
+
+function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const password = document.getElementById('login-password').value.trim();
+
+  // Clear previous errors
+  hideFieldError('email-error');
+  hideFieldError('pass-error');
+
+  // Validation
+  if (!email) { showFieldError('email-error', 'Email is required'); return; }
+  if (!password) { showFieldError('pass-error', 'Password is required'); return; }
+
+  // Show loading
+  const btn = document.getElementById('login-btn');
+  const btnText = document.getElementById('login-btn-text');
+  const spinner = document.getElementById('login-spinner');
+  btn.disabled = true;
+  btnText.textContent = 'Signing in...';
+  spinner.classList.remove('hidden');
+
+  // Simulate async auth (800ms delay)
+  setTimeout(() => {
+    btn.disabled = false;
+    btnText.textContent = 'Sign In';
+    spinner.classList.add('hidden');
+
+    const users = DB.get('users') || [];
+
+    // Match by email (case-insensitive) AND password
+    const user = users.find(u =>
+      u.email.toLowerCase() === email && u.password === password
+    );
+
+    if (!user) {
+      toast('Invalid email or password. Try the demo accounts below.', 'error');
+      showFieldError('pass-error', 'Incorrect email or password');
+      return;
+    }
+
+    // Auto-switch role tab to match the found user
+    loginRole = user.role;
+    document.getElementById('tab-driver').classList.toggle('active', user.role === 'driver');
+    document.getElementById('tab-student').classList.toggle('active', user.role === 'student');
+
+    currentUser = user;
+    DB.set('session', user.id);
+    toast(`Welcome back, ${user.name}! 👋`, 'success');
+    initApp();
+  }, 800);
+}
+
+function handleLogout() {
+  currentUser = null;
+  DB.set('session', null);
+  if (gpsInterval) { clearInterval(gpsInterval); gpsInterval = null; }
+  driverMap = null; studentMap = null;
+  showScreen('landing');
+  toast('Logged out successfully', 'info');
+}
+
+function showFieldError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+function hideFieldError(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+/* ================================================================
+   APP INIT
+   ================================================================ */
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+
+function initApp() {
+  showScreen('app');
+
+  // Set user info in topbar
+  document.getElementById('user-display-name').textContent = currentUser.name;
+  const pill = document.getElementById('user-role-pill');
+  const avatar = document.getElementById('user-avatar-icon');
+  if (currentUser.role === 'driver') {
+    pill.textContent = 'Driver';
+    pill.className = 'role-pill driver';
+    avatar.textContent = '🚗';
+    avatar.className = 'user-avatar avatar-driver';
+    buildDriverUI();
+  } else {
+    pill.textContent = 'Student';
+    pill.className = 'role-pill student';
+    avatar.textContent = '🎓';
+    avatar.className = 'user-avatar avatar-student';
+    buildStudentUI();
+  }
+
+  // Start simulated GPS
+  startGPSSimulation();
+}
+
+/* ================================================================
+   GPS SIMULATION
+   Moves bus position along route stops
+   ================================================================ */
+function startGPSSimulation() {
+  if (gpsInterval) clearInterval(gpsInterval);
+
+  gpsInterval = setInterval(() => {
+    const buses = DB.get('buses');
+    const positions = DB.get('busPositions') || {};
+
+    buses.forEach(bus => {
+      const pos = positions[bus.busNumber] || { lat: bus.stops[0].lat, lng: bus.stops[0].lng, stopIndex: 0 };
+      const nextIndex = (pos.stopIndex + 1) % bus.stops.length;
+      const target = bus.stops[nextIndex];
+
+      // Interpolate towards next stop
+      pos.lat += (target.lat - pos.lat) * 0.08;
+      pos.lng += (target.lng - pos.lng) * 0.08;
+
+      // Snap to next stop if close enough
+      const dist = Math.hypot(target.lat - pos.lat, target.lng - pos.lng);
+      if (dist < 0.0003) {
+        pos.stopIndex = nextIndex;
+        pos.lat = target.lat;
+        pos.lng = target.lng;
+      }
+      positions[bus.busNumber] = pos;
+    });
+
+    DB.set('busPositions', positions);
+    updateMapMarkers();
+
+    // Refresh relevant data displays
+    if (currentUser?.role === 'student') {
+      updateStudentBusInfo();
+    }
+  }, 2000);
+}
+
+/* ================================================================
+   DRIVER UI
+   ================================================================ */
+function buildDriverUI() {
+  const tabBar = document.getElementById('tab-bar');
+  const content = document.getElementById('app-content');
+
+  tabBar.innerHTML = `
+    <button class="tab-btn active" data-tab="d-map" onclick="switchTab(this, 'd-map')">🗺 Live Map</button>
+    <button class="tab-btn" data-tab="d-delay" onclick="switchTab(this, 'd-delay')">⏰ Morning Delay</button>
+    <button class="tab-btn" data-tab="d-dispatch" onclick="switchTab(this, 'd-dispatch')">🚌 Evening Dispatch</button>
+    <button class="tab-btn" data-tab="d-late" onclick="switchTab(this, 'd-late')">💬 Late Messages</button>
+  `;
+
+  content.innerHTML = `
+    <!-- TAB: MAP -->
+    <div class="tab-panel active" id="tab-d-map">
+      <div class="flex items-center justify-between" style="margin-bottom:12px">
+        <h2 style="font-size:1.1rem;font-weight:700;color:var(--gray-800)">Live Bus Route</h2>
+        <div class="live-indicator"><div class="live-dot"></div>LIVE</div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="value" id="d-total-stops">6</div><div class="label">Total Stops</div></div>
+        <div class="stat-card green"><div class="value" id="d-present-count">0</div><div class="label">Present</div></div>
+        <div class="stat-card red"><div class="value" id="d-absent-count">0</div><div class="label">Absent</div></div>
+      </div>
+
+      <div class="map-container">
+        <div id="driver-map"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="icon icon-blue">🛑</div>
+            Route Stops & Attendance
+          </div>
+        </div>
+        <div class="stop-list" id="driver-stop-list">Loading stops...</div>
+      </div>
+    </div>
+
+    <!-- TAB: DELAY -->
+    <div class="tab-panel" id="tab-d-delay">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="icon icon-amber">⏰</div>
+            Set Morning Delay
+          </div>
+        </div>
+        <p style="font-size:.875rem;color:var(--gray-500);margin-bottom:16px">
+          Notify students about your delay. They will see the updated time instantly.
+        </p>
+        <div id="current-delay-info"></div>
+        <div class="delay-input-row">
+          <div class="form-group">
+            <label class="form-label">Delay (minutes)</label>
+            <input type="number" class="form-input" id="delay-input" min="0" max="120" placeholder="e.g. 15" />
+          </div>
+          <button class="btn btn-primary" style="min-width:120px" onclick="setDelay()">
+            Update Delay
+          </button>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:10px" onclick="clearDelay()">Clear Delay</button>
+      </div>
+      <div class="info-banner blue">
+        ℹ️ Students watching Bus ${DB.get('users').find(u=>u.id===currentUser?.id)?.busNumber || 1} will see this delay in real-time.
+      </div>
+    </div>
+
+    <!-- TAB: DISPATCH -->
+    <div class="tab-panel" id="tab-d-dispatch">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="icon icon-green">🚌</div>
+            Evening Dispatch Time
+          </div>
+        </div>
+        <p style="font-size:.875rem;color:var(--gray-500);margin-bottom:16px">
+          Set the time when the bus will depart from college in the evening.
+        </p>
+        <div id="current-dispatch-info"></div>
+        <div class="delay-input-row">
+          <div class="form-group">
+            <label class="form-label">Dispatch Time</label>
+            <input type="time" class="form-input" id="dispatch-input" />
+          </div>
+          <button class="btn btn-primary" style="min-width:120px" onclick="setDispatch()">
+            Set Time
+          </button>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:10px" onclick="clearDispatch()">Clear Dispatch</button>
+      </div>
+      <div class="info-banner green">
+        ✅ Students will see the exact departure time on their dashboard.
+      </div>
+    </div>
+
+    <!-- TAB: LATE MESSAGES -->
+    <div class="tab-panel" id="tab-d-late">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="icon icon-amber">💬</div>
+            Late Student Messages
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="refreshLateMessages()">↻ Refresh</button>
+        </div>
+        <div id="late-messages-list">
+          <p style="color:var(--gray-400);font-size:.875rem;text-align:center;padding:20px">No late messages yet</p>
+        </div>
+      </div>
+      <div class="info-banner blue">
+        ℹ️ Check the box when a student boards the bus.
+      </div>
+    </div>
+  `;
+
+  // Init driver data displays
+  updateDelayDisplay();
+  updateDispatchDisplay();
+  refreshLateMessages();
+
+  // Init map after DOM is ready
+  setTimeout(() => {
+    initDriverMap();
+    renderDriverStops();
+  }, 100);
+}
+
+/* ---- Driver Map ---- */
+function initDriverMap() {
+  if (driverMap) return; // Already initialized
+  const buses = DB.get('buses');
+  const bus = buses[0]; // Driver sees bus 1
+  const center = bus.stops[0];
+
+  driverMap = L.map('driver-map', { zoomControl: true }).setView([center.lat, center.lng], 14);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(driverMap);
+
+  // Draw route polyline
+  const latlngs = bus.stops.map(s => [s.lat, s.lng]);
+  L.polyline(latlngs, { color: '#3b82f6', weight: 4, dashArray: '8 4', opacity: .7 }).addTo(driverMap);
+
+  renderDriverMapMarkers(bus);
+
+  // Bus position marker
+  const pos = DB.get('busPositions')[1];
+  const busIcon = L.divIcon({
+    html: '<div style="background:#3b82f6;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.3)">🚌</div>',
+    className: '', iconSize: [32, 32], iconAnchor: [16, 16]
+  });
+  driverBusMarker = L.marker([pos.lat, pos.lng], { icon: busIcon }).addTo(driverMap);
+  driverBusMarker.bindPopup('<b>Bus 1</b><br>In transit').openPopup();
+}
+
+function renderDriverMapMarkers(bus) {
+  const attendance = DB.get('attendance') || {};
+  const today = getToday();
+
+  // Clear old markers
+  stopMarkersDriver.forEach(m => driverMap.removeLayer(m));
+  stopMarkersDriver = [];
+
+  bus.stops.forEach((stop, i) => {
+    const att = attendance[today];
+    const student = (DB.get('users') || []).find(u => u.busNumber === 1 && u.stop === stop.name);
+    let status = 'pending';
+    if (student && att && att[student.id]) status = att[student.id];
+
+    const color = status === 'present' ? '#22c55e' : status === 'absent' ? '#ef4444' : '#94a3b8';
+    const icon = L.divIcon({
+      html: `<div style="background:${color};color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.3)">${i+1}</div>`,
+      className: '', iconSize: [20, 20], iconAnchor: [10, 10]
+    });
+    const m = L.marker([stop.lat, stop.lng], { icon }).addTo(driverMap);
+    m.bindPopup(`<b>${stop.name}</b><br>Status: ${status.toUpperCase()}`);
+    stopMarkersDriver.push(m);
+  });
+}
+
+function renderDriverStops() {
+  const buses = DB.get('buses');
+  const bus = buses[0];
+  const attendance = DB.get('attendance') || {};
+  const today = getToday();
+  const users = DB.get('users') || [];
+
+  let present = 0, absent = 0;
+
+  const items = bus.stops.map(stop => {
+    const student = users.find(u => u.busNumber === 1 && u.stop === stop.name);
+    const att = attendance[today];
+    let status = 'pending';
+    if (student && att && att[student.id]) status = att[student.id];
+    if (status === 'present') present++;
+    if (status === 'absent') absent++;
+    const skip = status === 'absent' ? `<span class="skip-badge">SKIP</span>` : '';
+    return `
+      <div class="stop-item">
+        <div class="stop-dot ${status}"></div>
+        <span class="stop-name">${stop.name}</span>
+        ${student ? `<span style="font-size:.75rem;color:var(--gray-400)">${student.name}</span>` : ''}
+        <span class="stop-badge ${status}">${status.toUpperCase()}</span>
+        ${skip}
+      </div>`;
+  }).join('');
+
+  document.getElementById('driver-stop-list').innerHTML = items;
+  const total = bus.stops.length;
+  document.getElementById('d-total-stops').textContent = total;
+  document.getElementById('d-present-count').textContent = present;
+  document.getElementById('d-absent-count').textContent = absent;
+}
+
+function updateMapMarkers() {
+  const pos = DB.get('busPositions');
+  if (!pos) return;
+
+  // Update driver map bus marker
+  if (driverBusMarker && pos[1]) {
+    driverBusMarker.setLatLng([pos[1].lat, pos[1].lng]);
+  }
+
+  // Update student map bus marker
+  if (busMarker && currentUser?.busNumber && pos[currentUser.busNumber]) {
+    const p = pos[currentUser.busNumber];
+    busMarker.setLatLng([p.lat, p.lng]);
+  }
+
+  // Refresh driver stops rendering
+  if (currentUser?.role === 'driver') {
+    renderDriverStops();
+    if (driverMap) {
+      const buses = DB.get('buses');
+      renderDriverMapMarkers(buses[0]);
+    }
+  }
+}
+
+/* ---- Delay ---- */
+function updateDelayDisplay() {
+  const delays = DB.get('delays') || {};
+  const delay = delays[1] || 0;
+  const el = document.getElementById('current-delay-info');
+  if (!el) return;
+  el.innerHTML = delay > 0
+    ? `<div class="info-banner amber">⚠️ Current delay set: <strong>${delay} minutes</strong></div>`
+    : `<div class="info-banner green">✅ No delay currently set</div>`;
+}
+
+function setDelay() {
+  const val = parseInt(document.getElementById('delay-input').value);
+  if (isNaN(val) || val < 0) { toast('Enter a valid delay time', 'error'); return; }
+  const delays = DB.get('delays') || {};
+  delays[1] = val;
+  DB.set('delays', delays);
+  updateDelayDisplay();
+  toast(`Delay set to ${val} minutes. Students notified!`, 'success');
+}
+
+function clearDelay() {
+  const delays = DB.get('delays') || {};
+  delays[1] = 0;
+  DB.set('delays', delays);
+  document.getElementById('delay-input').value = '';
+  updateDelayDisplay();
+  toast('Delay cleared', 'success');
+}
+
+/* ---- Dispatch ---- */
+function updateDispatchDisplay() {
+  const dispatch = DB.get('dispatch') || {};
+  const time = dispatch[1];
+  const el = document.getElementById('current-dispatch-info');
+  if (!el) return;
+  el.innerHTML = time
+    ? `<div class="info-banner green">🚌 Dispatch set for: <strong>${formatTime12(time)}</strong></div>`
+    : `<div class="info-banner blue">ℹ️ No dispatch time set yet</div>`;
+}
+
+function setDispatch() {
+  const val = document.getElementById('dispatch-input').value;
+  if (!val) { toast('Please select a time', 'error'); return; }
+  const dispatch = DB.get('dispatch') || {};
+  dispatch[1] = val;
+  DB.set('dispatch', dispatch);
+  updateDispatchDisplay();
+  toast(`Dispatch time set to ${formatTime12(val)}`, 'success');
+}
+
+function clearDispatch() {
+  const dispatch = DB.get('dispatch') || {};
+  dispatch[1] = '';
+  DB.set('dispatch', dispatch);
+  document.getElementById('dispatch-input').value = '';
+  updateDispatchDisplay();
+  toast('Dispatch time cleared', 'success');
+}
+
+/* ---- Late Messages ---- */
+function refreshLateMessages() {
+  const msgs = DB.get('lateMessages') || [];
+  const el = document.getElementById('late-messages-list');
+  if (!el) return;
+
+  if (msgs.length === 0) {
+    el.innerHTML = `<p style="color:var(--gray-400);font-size:.875rem;text-align:center;padding:20px">No late messages yet</p>`;
+    return;
+  }
+
+  el.innerHTML = msgs.map((msg, i) => `
+    <div class="late-msg-item ${msg.checked ? 'checked' : ''}">
+      <div class="late-msg-info">
+        <div class="late-msg-name">${msg.studentName}</div>
+        <div class="late-msg-text">${msg.message}</div>
+        <div style="font-size:.72rem;color:var(--gray-400);margin-top:4px">Bus ${msg.busNumber} · ${msg.time}</div>
+      </div>
+      <input type="checkbox" class="late-msg-checkbox" ${msg.checked ? 'checked' : ''}
+        onchange="toggleStudentBoarded(${i}, this.checked)" title="Mark student as boarded" />
+    </div>
+  `).join('');
+}
+
+function toggleStudentBoarded(index, checked) {
+  const msgs = DB.get('lateMessages') || [];
+  if (msgs[index]) {
+    msgs[index].checked = checked;
+    DB.set('lateMessages', msgs);
+    if (checked) toast(`✅ ${msgs[index].studentName} marked as boarded`, 'success');
+  }
+}
+
+/* ================================================================
+   STUDENT UI
+   ================================================================ */
+let selectedBus = 1;
+
+function buildStudentUI() {
+  selectedBus = currentUser.busNumber || 1;
+  const tabBar = document.getElementById('tab-bar');
+  const content = document.getElementById('app-content');
+
+  tabBar.innerHTML = `
+    <button class="tab-btn active" data-tab="s-map" onclick="switchTab(this, 's-map')">🗺 Live Tracking</button>
+    <button class="tab-btn" data-tab="s-attendance" onclick="switchTab(this, 's-attendance')">✅ Attendance</button>
+    <button class="tab-btn" data-tab="s-alerts" onclick="switchTab(this, 's-alerts')">⏰ Alerts & Info</button>
+    <button class="tab-btn" data-tab="s-late" onclick="switchTab(this, 's-late')">💬 Late Message</button>
+  `;
+
+  content.innerHTML = `
+    <!-- TAB: MAP -->
+    <div class="tab-panel active" id="tab-s-map">
+      <div class="flex items-center justify-between" style="margin-bottom:12px">
+        <h2 style="font-size:1.1rem;font-weight:700;color:var(--gray-800)">Live Bus Tracking</h2>
+        <div class="live-indicator"><div class="live-dot"></div>LIVE GPS</div>
+      </div>
+
+      <div class="section-label">SELECT BUS</div>
+      <div class="bus-selector" id="bus-selector">
+        <button class="bus-btn ${selectedBus===1?'selected':''}" onclick="selectBus(1)">🚌 Bus 1</button>
+        <button class="bus-btn ${selectedBus===2?'selected':''}" onclick="selectBus(2)">🚌 Bus 2</button>
+        <button class="bus-btn ${selectedBus===3?'selected':''}" onclick="selectBus(3)">🚌 Bus 3</button>
+      </div>
+
+      <div class="bus-eta" id="bus-eta">
+        <div class="eta-card"><div class="eta-val" id="eta-val">--</div><div class="eta-label">ETA (mins)</div></div>
+        <div class="eta-card"><div class="eta-val" id="next-stop-val">--</div><div class="eta-label">Next Stop</div></div>
+        <div class="eta-card"><div class="eta-val" id="bus-speed-val">32</div><div class="eta-label">Speed km/h</div></div>
+      </div>
+
+      <div class="map-container">
+        <div id="student-map"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">
+          <div class="icon icon-blue">🛑</div>
+          Route Stops
+        </div>
+        <div class="stop-list" id="student-stop-list">Loading...</div>
+      </div>
+    </div>
+
+    <!-- TAB: ATTENDANCE -->
+    <div class="tab-panel" id="tab-s-attendance">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="icon icon-green">✅</div>
+            Mark Today's Attendance
+          </div>
+        </div>
+        <p style="font-size:.875rem;color:var(--gray-500);margin-bottom:12px">
+          Date: <strong>${new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</strong>
+        </p>
+        <p style="font-size:.875rem;color:var(--gray-500);margin-bottom:16px">
+          Your stop: <strong>${currentUser.stop || 'Not assigned'}</strong>
+        </p>
+        <div id="attendance-status-banner"></div>
+        <div class="attendance-options">
+          <button class="att-btn present-btn" id="att-present-btn" onclick="markAttendance('present')">
+            ✅ Present<br><span style="font-size:.72rem;font-weight:400">I'll be at the stop</span>
+          </button>
+          <button class="att-btn absent-btn" id="att-absent-btn" onclick="markAttendance('absent')">
+            ❌ Absent<br><span style="font-size:.72rem;font-weight:400">Skip today</span>
+          </button>
+        </div>
+      </div>
+      <div class="info-banner blue">
+        ℹ️ Your attendance updates the driver's stop markers in real-time (green = present, red = absent).
+      </div>
+    </div>
+
+    <!-- TAB: ALERTS -->
+    <div class="tab-panel" id="tab-s-alerts">
+      <div class="section-label">MORNING DELAY</div>
+      <div class="card" id="delay-card">
+        <div class="card-title" style="margin-bottom:12px">
+          <div class="icon icon-amber">⏰</div>
+          Morning Delay Status
+        </div>
+        <div id="student-delay-info">Checking...</div>
+      </div>
+
+      <div class="section-label">EVENING DISPATCH</div>
+      <div class="card" id="dispatch-card">
+        <div class="card-title" style="margin-bottom:12px">
+          <div class="icon icon-green">🚌</div>
+          Evening Dispatch Time
+        </div>
+        <div id="student-dispatch-info">Checking...</div>
+      </div>
+    </div>
+
+    <!-- TAB: LATE MESSAGE -->
+    <div class="tab-panel" id="tab-s-late">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="icon icon-amber">💬</div>
+            Send Late Message
+          </div>
+        </div>
+        <p style="font-size:.875rem;color:var(--gray-500);margin-bottom:16px">
+          Let the driver know you'll be a few minutes late to the stop. Maximum delay: <strong>10 minutes</strong>.
+        </p>
+        <div id="late-msg-sent-banner"></div>
+        <div class="form-group">
+          <label class="form-label">Minutes Late (max 10)</label>
+          <input type="number" class="form-input" id="late-minutes" min="1" max="10" placeholder="e.g. 5" />
+          <div class="form-error hidden" id="late-error">Max 10 minutes allowed</div>
+        </div>
+        <button class="btn btn-primary" onclick="sendLateMessage()">
+          📤 Send to Driver
+        </button>
+      </div>
+      <div class="info-banner amber">
+        ⚠️ Only send this if you're actually running late. This is for evening bus only.
+      </div>
+    </div>
+  `;
+
+  // Init data
+  updateAttendanceDisplay();
+  updateStudentBusInfo();
+
+  setTimeout(() => {
+    initStudentMap();
+    renderStudentStops();
+  }, 100);
+}
+
+/* ---- Student Map ---- */
+function initStudentMap() {
+  if (studentMap) return;
+  const buses = DB.get('buses');
+  const bus = buses.find(b => b.busNumber === selectedBus) || buses[0];
+  const center = bus.stops[0];
+
+  studentMap = L.map('student-map', { zoomControl: true }).setView([center.lat, center.lng], 14);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(studentMap);
+
+  renderStudentMapMarkers(bus);
+}
+
+function renderStudentMapMarkers(bus) {
+  if (!studentMap) return;
+
+  // Clear old markers
+  stopMarkersStudent.forEach(m => studentMap.removeLayer(m));
+  stopMarkersStudent = [];
+  if (busMarker) studentMap.removeLayer(busMarker);
+
+  const latlngs = bus.stops.map(s => [s.lat, s.lng]);
+  L.polyline(latlngs, { color: '#22c55e', weight: 4, dashArray: '8 4', opacity: .7 }).addTo(studentMap);
+
+  bus.stops.forEach((stop, i) => {
+    const isMyStop = stop.name === currentUser.stop;
+    const icon = L.divIcon({
+      html: `<div style="background:${isMyStop ? '#3b82f6' : '#22c55e'};color:white;border-radius:50%;width:${isMyStop ? 24 : 18}px;height:${isMyStop ? 24 : 18}px;display:flex;align-items:center;justify-content:center;font-size:${isMyStop ? 12 : 9}px;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.3)">${isMyStop ? '★' : i+1}</div>`,
+      className: '', iconSize: [24, 24], iconAnchor: [12, 12]
+    });
+    const m = L.marker([stop.lat, stop.lng], { icon }).addTo(studentMap);
+    m.bindPopup(`<b>${stop.name}</b>${isMyStop ? '<br>⭐ Your Stop' : ''}`);
+    if (isMyStop) m.openPopup();
+    stopMarkersStudent.push(m);
+  });
+
+  // Bus marker
+  const pos = DB.get('busPositions')[bus.busNumber];
+  if (pos) {
+    const busIcon = L.divIcon({
+      html: '<div style="background:#3b82f6;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.3)">🚌</div>',
+      className: '', iconSize: [32, 32], iconAnchor: [16, 16]
+    });
+    busMarker = L.marker([pos.lat, pos.lng], { icon: busIcon }).addTo(studentMap);
+    busMarker.bindPopup(`<b>Bus ${bus.busNumber}</b><br>Live Location`).openPopup();
+  }
+
+  studentMap.fitBounds(latlngs, { padding: [20, 20] });
+}
+
+function selectBus(num) {
+  selectedBus = num;
+  document.querySelectorAll('.bus-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.bus-btn')[num - 1].classList.add('selected');
+
+  const buses = DB.get('buses');
+  const bus = buses.find(b => b.busNumber === num);
+  if (studentMap) {
+    renderStudentMapMarkers(bus);
+  }
+  renderStudentStops();
+  updateStudentBusInfo();
+}
+
+function renderStudentStops() {
+  const buses = DB.get('buses');
+  const bus = buses.find(b => b.busNumber === selectedBus);
+  if (!bus) return;
+
+  const el = document.getElementById('student-stop-list');
+  if (!el) return;
+
+  const items = bus.stops.map((stop, i) => {
+    const isMyStop = stop.name === currentUser.stop && bus.busNumber === currentUser.busNumber;
+    return `
+      <div class="stop-item" style="${isMyStop ? 'background:var(--blue-50);border-color:var(--blue-200)' : ''}">
+        <div class="stop-dot" style="background:${isMyStop ? 'var(--blue-500)' : 'var(--green-500)'}"></div>
+        <span class="stop-name">${stop.name}${isMyStop ? ' ⭐' : ''}</span>
+        <span style="font-size:.72rem;color:var(--gray-400)">Stop ${i+1}</span>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = items;
+}
+
+function updateStudentBusInfo() {
+  const buses = DB.get('buses');
+  const bus = buses.find(b => b.busNumber === selectedBus);
+  if (!bus) return;
+
+  const pos = DB.get('busPositions')[selectedBus];
+  if (!pos) return;
+
+  const currentStopIndex = pos.stopIndex;
+  const currentStop = bus.stops[currentStopIndex];
+  const nextStop = bus.stops[(currentStopIndex + 1) % bus.stops.length];
+
+  const etaEl = document.getElementById('eta-val');
+  const nextEl = document.getElementById('next-stop-val');
+
+  if (etaEl) etaEl.textContent = Math.floor(Math.random() * 8) + 2; // Simulated ETA 2-10 mins
+  if (nextEl) nextEl.textContent = nextStop ? nextStop.name.split(' ')[0] : '--';
+
+  // Also update alerts
+  updateStudentAlerts();
+}
+
+function updateStudentAlerts() {
+  const delays = DB.get('delays') || {};
+  const dispatch = DB.get('dispatch') || {};
+
+  const busNum = selectedBus;
+  const delay = delays[busNum] || 0;
+  const dispatchTime = dispatch[busNum];
+
+  const delayEl = document.getElementById('student-delay-info');
+  const dispatchEl = document.getElementById('student-dispatch-info');
+
+  if (delayEl) {
+    delayEl.innerHTML = delay > 0
+      ? `<div class="info-banner amber">⚠️ Bus is running <strong>${delay} minutes late</strong> today. Please wait at your stop.</div>`
+      : `<div class="info-banner green">✅ Bus is on time — no delay reported.</div>`;
+  }
+
+  if (dispatchEl) {
+    dispatchEl.innerHTML = dispatchTime
+      ? `<div class="info-banner green">🕐 Evening bus departs at <strong style="font-size:1.1rem">${formatTime12(dispatchTime)}</strong></div>`
+      : `<div class="info-banner blue">ℹ️ Evening dispatch time not set yet. Check back later.</div>`;
+  }
+}
+
+/* ---- Attendance ---- */
+function updateAttendanceDisplay() {
+  const attendance = DB.get('attendance') || {};
+  const today = getToday();
+  const att = attendance[today]?.[currentUser.id];
+
+  const banner = document.getElementById('attendance-status-banner');
+  if (!banner) return;
+
+  const presentBtn = document.getElementById('att-present-btn');
+  const absentBtn = document.getElementById('att-absent-btn');
+
+  if (att === 'present') {
+    banner.innerHTML = `<div class="info-banner green">✅ You've marked yourself <strong>Present</strong> today</div>`;
+    presentBtn?.classList.add('selected');
+    absentBtn?.classList.remove('selected');
+  } else if (att === 'absent') {
+    banner.innerHTML = `<div class="info-banner red">❌ You've marked yourself <strong>Absent</strong> today</div>`;
+    absentBtn?.classList.add('selected');
+    presentBtn?.classList.remove('selected');
+  } else {
+    banner.innerHTML = `<div class="info-banner blue">ℹ️ Attendance not marked yet today</div>`;
+  }
+}
+
+function markAttendance(status) {
+  const attendance = DB.get('attendance') || {};
+  const today = getToday();
+  if (!attendance[today]) attendance[today] = {};
+  attendance[today][currentUser.id] = status;
+  DB.set('attendance', attendance);
+  updateAttendanceDisplay();
+  toast(status === 'present' ? '✅ Marked Present! Driver has been notified.' : '❌ Marked Absent. Driver has been notified.', 'success');
+  renderDriverStops();
+}
+
+/* ---- Late Message ---- */
+function sendLateMessage() {
+  const mins = parseInt(document.getElementById('late-minutes').value);
+  const errEl = document.getElementById('late-error');
+
+  if (isNaN(mins) || mins < 1) {
+    errEl.textContent = 'Please enter minutes (1-10)';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (mins > 10) {
+    errEl.textContent = 'Maximum 10 minutes allowed';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  errEl.classList.add('hidden');
+
+  const msgs = DB.get('lateMessages') || [];
+  msgs.unshift({
+    studentId: currentUser.id,
+    studentName: currentUser.name,
+    busNumber: currentUser.busNumber || selectedBus,
+    message: `I will be late by ${mins} minute${mins > 1 ? 's' : ''} — please wait`,
+    time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+    checked: false
+  });
+  DB.set('lateMessages', msgs);
+
+  document.getElementById('late-minutes').value = '';
+  const banner = document.getElementById('late-msg-sent-banner');
+  if (banner) banner.innerHTML = `<div class="info-banner green">✅ Message sent to driver! They'll wait ${mins} minute${mins > 1 ? 's' : ''} for you.</div>`;
+  toast('Late message sent to driver!', 'success');
+}
+
+/* ================================================================
+   TAB SWITCHING
+   ================================================================ */
+function switchTab(btn, panelId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + panelId).classList.add('active');
+
+  // Lazy-init maps on first view
+  if (panelId === 'd-map' && !driverMap) {
+    setTimeout(initDriverMap, 100);
+  }
+  if (panelId === 's-map' && !studentMap) {
+    setTimeout(() => { initStudentMap(); renderStudentStops(); }, 100);
+  }
+  if (panelId === 'd-delay') updateDelayDisplay();
+  if (panelId === 'd-dispatch') updateDispatchDisplay();
+  if (panelId === 'd-late') refreshLateMessages();
+  if (panelId === 's-alerts') updateStudentAlerts();
+  if (panelId === 's-attendance') updateAttendanceDisplay();
+}
+
+/* ================================================================
+   UTILITIES
+   ================================================================ */
+function getToday() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function formatTime12(time24) {
+  if (!time24) return '';
+  const [h, m] = time24.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 || 12;
+  return `${hour}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+/* ================================================================
+   BOOT
+   ================================================================ */
+DB.init();
+
+// Auto-restore session
+const savedSession = DB.get('session');
+if (savedSession) {
+  const users = DB.get('users');
+  const user = users?.find(u => u.id === savedSession);
+  if (user) {
+    currentUser = user;
+    initApp();
+  }
